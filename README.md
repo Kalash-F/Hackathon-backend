@@ -1,6 +1,6 @@
 # Solana Flash Loan Arbitrage Smart Contract
 
-A Rust-based Solana smart contract that executes flash loan arbitrage strategies across multiple DEXes using the Anchor framework.
+A Rust-based Solana smart contract that executes flash loan arbitrage strategies across multiple DEXes using the Anchor framework, with a React-based UI for easy interaction.
 
 ## Overview
 
@@ -19,6 +19,8 @@ This smart contract allows users to execute arbitrage trades between two differe
 - Profit validation to ensure transactions are profitable
 - Robust error handling
 - Security best practices
+- React-based UI for easy interaction with the contract
+- Multiple deployment options (local, testnet, persistent wallet)
 
 ## Project Structure
 
@@ -28,6 +30,8 @@ This smart contract allows users to execute arbitrage trades between two differe
 - `src/instructions/`: Instruction implementations
   - `flash_loan.rs`: Main flash loan and arbitrage instruction
 - `tests/`: Integration tests
+- `flash-loan-ui/`: React-based user interface
+- `*.sh`: Various deployment and testing scripts
 
 ## Installation and Setup
 
@@ -44,7 +48,35 @@ This smart contract allows users to execute arbitrage trades between two differe
    anchor build
    ```
 
-## Usage
+## Deployment Options
+
+### Local Development
+```bash
+./run-gui-and-test.sh
+```
+This script starts a local validator, deploys the contract, and launches the UI.
+
+### Testnet Deployment
+```bash
+./deploy_to_testnet.sh
+```
+Deploys the contract to Solana testnet and starts the UI.
+
+### Persistent Wallet Deployment
+```bash
+./persistent_deploy.sh
+```
+Creates a persistent wallet for deployment, funds it if needed, deploys to the specified network (default: testnet), and starts the UI.
+
+## UI Usage
+
+After deployment, the UI will be available at http://localhost:3000. You can:
+
+1. Connect your wallet using the "Connect Wallet" button
+2. Enter the loan amount and minimum profit amount
+3. Click "Execute Flash Loan Arbitrage" to execute or simulate the transaction
+
+## Usage in Code
 
 ### Flash Loan and Arbitrage Instruction
 
