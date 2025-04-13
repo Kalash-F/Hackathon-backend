@@ -1,0 +1,28 @@
+[features]
+seeds = false
+skip-lint = false
+
+[programs.testnet]
+flash_loan_arbitrage = "9chwqr3q9XBJnCs8euyFpyqzHamXpZk4mCAEzsfXjWCC"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "testnet"
+wallet = "./wallet/deployment-wallet.json"
+
+[scripts]
+test = "ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+
+[test]
+startup_wait = 40000
+
+# Remove the validator section so we don't try to start one
+# [test.validator]
+# url = "http://127.0.0.1:8899"
+# rpc_port = 5000
+# websocket_port = 8900
+
+[toolchain]
+anchor_version = "0.28.0" 
