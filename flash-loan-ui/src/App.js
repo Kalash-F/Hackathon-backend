@@ -321,6 +321,12 @@ function FlashLoanArbitrageInterface({ network, programId }) {
   const [status, setStatus] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulationResult, setSimulationResult] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [slippageTolerance, setSlippageTolerance] = useState(1.0); // Default 1%
+  
   // Helper to validate a Solana public key
   const isValidPublicKey = (value) => {
     try {
@@ -535,140 +541,219 @@ function FlashLoanArbitrageInterface({ network, programId }) {
     return provider;
   };
 
-  const executeFlashLoanArbitrage = async () => {
+  // Simulate the arbitrage before execution
+  const simulateArbitrage = async () => {
+    setIsSimulating(true);
+    setErrorMessage(null);
+    setSimulationResult(null);
+    
     try {
-      setIsLoading(true);
-      setStatus(`Preparing transaction on ${network}...`);
-      
-      if (!wallet || !wallet.publicKey) {
-        throw new WalletNotConnectedError();
-      }
-      
-      // Validate all required accounts
-      const accounts = getAccountsFromState();
-      const missingAccounts = Object.entries(accounts)
-        .filter(([_, value]) => value === null)
-        .map(([key, _]) => key);
-      
-      if (missingAccounts.length > 0) {
-        throw new Error(`Missing or invalid account addresses: ${missingAccounts.join(', ')}`);
-      }
-
       const provider = getProvider();
       const program = new Program(idl, programId, provider);
       
-      // Convert string inputs to BN
-      const loanAmountBN = new BN(loanAmount);
-      const minProfitAmountBN = new BN(minProfitAmount);
+      // Get accounts from current state
+      const accounts = getAccountsFromState();
+      if (!accounts) return;
       
-      setStatus(`Note: This is a simulation on ${network} since we need actual DEX and lending protocol accounts`);
+      console.log('Simulating arbitrage with accounts:', accounts);
       
-      // Log the accounts we'd need in a real transaction
-      console.log(`Required accounts for this transaction on ${network}:`);
-      console.log('- Authority:', wallet.publicKey.toString());
+      // Convert loan amount and min profit to program format (u64)
+      const loanAmount = new BN(Number(loanAmount) * 1e9); // Convert to lamports
+      const minProfitAmount = new BN(Number(minProfitAmount) * 1e9); // Convert to lamports
       
-      Object.entries(accounts).forEach(([key, value]) => {
-        console.log(`- ${key}: ${value.toString()}`);
+      // Call the simulation instruction
+      const result = await program.methods
+        .simulateArbitrage(loanAmount, minProfitAmount)
+        .accounts(accounts)
+        .simulate();
+      
+      // Extract the estimated profit from result
+      // Note: In Anchor, simulations return the result inside a array at returnData.returnData
+      const estimatedProfit = new BN(result.returnData.returnData);
+      const estimatedProfitSol = estimatedProfit.toNumber() / 1e9;
+      
+      setSimulationResult({
+        isProftable: estimatedProfit.gt(minProfitAmount),
+        estimatedProfit: estimatedProfitSol,
+        loanAmount: Number(loanAmount) / 1e9,
+        minProfitAmount: Number(minProfitAmount) / 1e9
       });
       
-      // In a real implementation, we would call:
-      setStatus(`Preparing to execute flash loan arbitrage on ${network}...`);
-      
-      try {
-        // Uncomment for actual implementation
-        // await program.methods
-        //   .flashLoanAndArbitrage(
-        //     loanAmountBN,
-        //     minProfitAmountBN
-        //   )
-        //   .accounts({
-        //     base: {
-        //       authority: wallet.publicKey,
-        //       tokenProgram: TOKEN_PROGRAM_ID,
-        //       systemProgram: SystemProgram.programId,
-        //     },
-        //     lendingProgram: accounts.lendingProgram,
-        //     loanTokenAccount: accounts.loanTokenAccount,
-        //     loanReserveAccount: accounts.loanReserveAccount,
-        //     lendingFeeAccount: accounts.lendingFeeAccount,
-        //     dexAProgram: accounts.dexAProgram,
-        //     dexAPool: accounts.dexAPool,
-        //     dexAAuthority: accounts.dexAAuthority,
-        //     dexAInputTokenAccount: accounts.dexAInputTokenAccount,
-        //     dexAOutputTokenAccount: accounts.dexAOutputTokenAccount,
-        //     dexATokenAAccount: accounts.dexATokenAAccount,
-        //     dexATokenBAccount: accounts.dexATokenBAccount,
-        //     dexBProgram: accounts.dexBProgram,
-        //     dexBPool: accounts.dexBPool,
-        //     dexBAuthority: accounts.dexBAuthority,
-        //     dexBInputTokenAccount: accounts.dexBInputTokenAccount,
-        //     dexBOutputTokenAccount: accounts.dexBOutputTokenAccount,
-        //     dexBTokenAAccount: accounts.dexBTokenAAccount,
-        //     dexBTokenBAccount: accounts.dexBTokenBAccount,
-        //   })
-        //   .rpc();
-        
-        // For simulation purposes
-        setStatus(`Transaction sent to ${network}. Processing...`);
-        
-        // Simulate success after 2 seconds
-        setTimeout(() => {
-          setStatus(`Simulation complete on ${network}!`);
-          
-          if (network === WalletAdapterNetwork.Mainnet) {
-            setStatus((prev) => prev + '\n\nNote: On Mainnet, transactions require real SOL for fees and may have higher minimum thresholds for profitability.');
-          } else if (network === WalletAdapterNetwork.Testnet) {
-            setStatus((prev) => prev + '\n\nNote: On Testnet, you can use an airdrop to get SOL for testing.');
-          } else if (network === WalletAdapterNetwork.Devnet) {
-            setStatus((prev) => prev + '\n\nNote: On Devnet, you can use the Solana CLI to airdrop SOL: `solana airdrop 1`');
-          }
-          
-          setIsLoading(false);
-        }, 2000);
-      } catch (error) {
-        console.error(`Transaction error on ${network}:`, error);
-        setStatus(`Error executing transaction on ${network}: ${error.message}`);
-        setIsLoading(false);
-      }
+      console.log('Simulation result:', {
+        estimatedProfit: estimatedProfitSol,
+        isProftable: estimatedProfit.gt(minProfitAmount)
+      });
       
     } catch (error) {
-      console.error(`Setup error on ${network}:`, error);
-      setStatus(`Error: ${error.message}`);
+      console.error('Simulation error:', error);
+      setErrorMessage(`Simulation failed: ${error.message}`);
+    } finally {
+      setIsSimulating(false);
+    }
+  };
+  
+  // Modified execute function to run simulation first
+  const executeFlashLoanArbitrage = async () => {
+    if (!wallet) throw new WalletNotConnectedError();
+    
+    setIsLoading(true);
+    setErrorMessage(null);
+    
+    try {
+      // Run simulation first
+      await simulateArbitrage();
+      
+      // Check if simulation was successful and profitable
+      if (simulationResult && !simulationResult.isProftable) {
+        setErrorMessage("Transaction would not be profitable based on simulation results. Execution aborted.");
+        setIsLoading(false);
+        return;
+      }
+      
+      const provider = getProvider();
+      const program = new Program(idl, programId, provider);
+      
+      // Get accounts from current state
+      const accounts = getAccountsFromState();
+      if (!accounts) return;
+      
+      console.log('Executing arbitrage with accounts:', accounts);
+      
+      // Input validation
+      if (!loanAmount || isNaN(loanAmount) || Number(loanAmount) <= 0) {
+        setErrorMessage("Please enter a valid loan amount");
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!minProfitAmount || isNaN(minProfitAmount) || Number(minProfitAmount) <= 0) {
+        setErrorMessage("Please enter a valid minimum profit amount");
+        setIsLoading(false);
+        return;
+      }
+      
+      // Convert loan amount and min profit to program format (u64)
+      const loanAmountBN = new BN(Number(loanAmount) * 1e9); // Convert to lamports
+      const minProfitAmountBN = new BN(Number(minProfitAmount) * 1e9); // Convert to lamports
+      
+      // Send transaction
+      const tx = await program.methods
+        .flashLoanAndArbitrage(loanAmountBN, minProfitAmountBN)
+        .accounts(accounts)
+        .rpc();
+      
+      setStatus(`Transaction sent to ${network}. Processing...`);
+      
+      // Get the transaction confirmation
+      const confirmation = await provider.connection.confirmTransaction(tx, 'confirmed');
+      console.log("Transaction confirmed:", confirmation);
+      
+      setStatus(`Transaction executed successfully on ${network}!`);
+    } catch (error) {
+      console.error('Transaction error:', error);
+      setErrorMessage(error.toString());
+      setStatus(`Error executing transaction on ${network}: ${error.message}`);
+    } finally {
       setIsLoading(false);
     }
   };
-
-  // Token change handler
-  const handleTokenChange = (e) => {
-    const token = e.target.value;
-    setSelectedToken(token);
-    
-    // Update reserve account based on selected token
-    switch(token) {
-      case 'SOL':
-        setLoanReserveAccount(PORT_FINANCE_KEYS.solReserve);
-        break;
-      case 'USDC':
-        setLoanReserveAccount(PORT_FINANCE_KEYS.usdcReserve);
-        break;
-      case 'USDT':
-        setLoanReserveAccount(PORT_FINANCE_KEYS.usdtReserve);
-        break;
-      case 'BTC':
-        setLoanReserveAccount(PORT_FINANCE_KEYS.btcReserve);
-        break;
-      case 'MER':
-        setLoanReserveAccount(PORT_FINANCE_KEYS.merReserve);
-        break;
-      default:
-        setLoanReserveAccount(PORT_FINANCE_KEYS.solReserve);
+  
+  // Add a more secure validation function for accounts
+  const validateAccount = (pubkeyString, name) => {
+    try {
+      if (!pubkeyString || pubkeyString.trim() === '') {
+        throw new Error(`${name} is required`);
+      }
+      
+      // Check if it's a valid public key
+      new PublicKey(pubkeyString);
+      return true;
+    } catch (e) {
+      setErrorMessage(`Invalid ${name}: ${e.message}`);
+      return false;
     }
-    
-    setStatus(`Token changed to ${token}. Loan reserve account updated.`);
   };
-
+  
+  // Add a section to display simulation results
+  const renderSimulationResults = () => {
+    if (!simulationResult) return null;
+    
+    const { estimatedProfit, isProftable, loanAmount, minProfitAmount } = simulationResult;
+    
+    return (
+      <div style={{
+        marginTop: '20px',
+        padding: '15px',
+        borderRadius: '8px',
+        backgroundColor: isProftable ? '#e6ffe6' : '#ffe6e6',
+        border: `1px solid ${isProftable ? '#b3ffb3' : '#ffb3b3'}`,
+        maxWidth: '500px',
+        width: '100%'
+      }}>
+        <h3>Simulation Results</h3>
+        <div>
+          <p><strong>Loan Amount:</strong> {loanAmount} SOL</p>
+          <p><strong>Min Profit Required:</strong> {minProfitAmount} SOL</p>
+          <p><strong>Estimated Profit:</strong> {estimatedProfit.toFixed(6)} SOL</p>
+          <p>
+            <strong>Status:</strong> 
+            {isProftable 
+              ? '✅ Transaction would be profitable' 
+              : '❌ Transaction would not be profitable'}
+          </p>
+        </div>
+      </div>
+    );
+  };
+  
+  // Add advanced settings section
+  const renderAdvancedSettings = () => {
+    if (!showAdvancedSettings) return null;
+    
+    return (
+      <div style={{
+        marginTop: '15px',
+        padding: '15px',
+        borderRadius: '8px',
+        backgroundColor: '#f5f5f5',
+        border: '1px solid #e0e0e0',
+        maxWidth: '500px',
+        width: '100%'
+      }}>
+        <h3>Advanced Settings</h3>
+        <div style={{ marginBottom: '10px' }}>
+          <label htmlFor="slippage" style={{ marginRight: '10px' }}>
+            Slippage Tolerance (%):
+          </label>
+          <input
+            id="slippage"
+            type="number"
+            min="0.1"
+            max="5"
+            step="0.1"
+            value={slippageTolerance}
+            onChange={(e) => setSlippageTolerance(Number(e.target.value))}
+            style={{
+              padding: '8px',
+              borderRadius: '4px',
+              border: '1px solid #ccc',
+              width: '80px'
+            }}
+          />
+        </div>
+      </div>
+    );
+  };
+  
   return (
-    <div style={{ width: '100%', maxWidth: '800px' }}>
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center',
+      width: '100%',
+      maxWidth: '800px',
+      margin: '0 auto',
+    }}>
       <div style={{ marginBottom: '20px' }}>
         <p>This interface allows you to execute flash loan arbitrage between two DEXs on {network}.</p>
         <p><strong>Current Network:</strong> {network}</p>
@@ -717,7 +802,7 @@ function FlashLoanArbitrageInterface({ network, programId }) {
         <div style={{ display: 'flex', marginBottom: '10px' }}>
           <select
             value={selectedToken}
-            onChange={handleTokenChange}
+            onChange={(e) => setSelectedToken(e.target.value)}
             style={{
               padding: '10px',
               borderRadius: '4px',
@@ -1143,22 +1228,76 @@ function FlashLoanArbitrageInterface({ network, programId }) {
         </p>
       </div>
       
-      <button
-        onClick={executeFlashLoanArbitrage}
-        disabled={isLoading || !wallet}
-        style={{
-          width: '100%',
-          padding: '10px',
-          backgroundColor: wallet ? '#4CAF50' : '#cccccc',
-          color: 'white',
-          border: 'none',
+      {/* Add simulation button */}
+      <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+        <button
+          onClick={simulateArbitrage}
+          disabled={!wallet || isSimulating}
+          style={{
+            padding: '10px 15px',
+            borderRadius: '4px',
+            backgroundColor: '#4285f4',
+            color: 'white',
+            border: 'none',
+            cursor: isSimulating ? 'not-allowed' : 'pointer',
+            opacity: isSimulating ? 0.6 : 1
+          }}
+        >
+          {isSimulating ? 'Simulating...' : 'Simulate Transaction'}
+        </button>
+        
+        <button
+          onClick={executeFlashLoanArbitrage}
+          disabled={!wallet || isLoading}
+          style={{
+            padding: '10px 15px',
+            borderRadius: '4px',
+            backgroundColor: '#34a853',
+            color: 'white',
+            border: 'none',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
+            opacity: isLoading ? 0.6 : 1
+          }}
+        >
+          {isLoading ? 'Executing...' : 'Execute Flash Loan Arbitrage'}
+        </button>
+        
+        <button
+          onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+          style={{
+            padding: '10px 15px',
+            borderRadius: '4px',
+            backgroundColor: '#f0f0f0',
+            color: '#333',
+            border: '1px solid #ccc',
+            cursor: 'pointer'
+          }}
+        >
+          {showAdvancedSettings ? 'Hide Advanced Settings' : 'Show Advanced Settings'}
+        </button>
+      </div>
+      
+      {/* Display advanced settings */}
+      {renderAdvancedSettings()}
+      
+      {/* Display simulation results */}
+      {renderSimulationResults()}
+      
+      {/* Display error messages */}
+      {errorMessage && (
+        <div style={{
+          marginTop: '20px',
+          padding: '10px 15px',
           borderRadius: '4px',
-          cursor: wallet ? 'pointer' : 'not-allowed',
-          marginTop: '10px',
-        }}
-      >
-        {isLoading ? 'Processing...' : 'Execute Flash Loan Arbitrage'}
-      </button>
+          backgroundColor: '#ffebee',
+          border: '1px solid #ffcdd2',
+          color: '#c62828',
+          maxWidth: '500px',
+          width: '100%'
+        }}>
+          <p><strong>Error:</strong> {errorMessage}</p>
+        </div>
+      )}
       
       {status && (
         <div style={{ 

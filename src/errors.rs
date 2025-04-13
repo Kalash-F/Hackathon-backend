@@ -29,4 +29,37 @@ pub enum FlashLoanArbitrageError {
     
     #[msg("Unauthorized access")]
     Unauthorized,
+
+    #[msg("Token account mint mismatch")]
+    TokenAccountMintMismatch,
+    
+    #[msg("Token account owner mismatch")]
+    TokenAccountOwnerMismatch,
+    
+    #[msg("DEX pool account owner mismatch")]
+    DexPoolOwnerMismatch,
+    
+    #[msg("Lending pool account owner mismatch")]
+    LendingPoolOwnerMismatch,
+    
+    #[msg("Instruction timeout exceeded")]
+    InstructionTimeoutExceeded,
+    
+    #[msg("Slippage tolerance exceeded")]
+    SlippageToleranceExceeded,
+    
+    #[msg("First swap failed: insufficient output")]
+    FirstSwapInsufficientOutput,
+    
+    #[msg("Second swap failed: insufficient output")]
+    SecondSwapInsufficientOutput,
+    
+    #[msg("Loan amount too small")]
+    LoanAmountTooSmall,
+    
+    #[msg("Loan amount too large")]
+    LoanAmountTooLarge,
+    
+    #[msg("DEX A and DEX B cannot be the same")]
+    SameDexError,
 } 
