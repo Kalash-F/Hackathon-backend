@@ -21,6 +21,9 @@ This smart contract allows users to execute arbitrage trades between two differe
 - Security best practices
 - React-based UI for easy interaction with the contract
 - Multiple deployment options (local, testnet, persistent wallet)
+- Simulation capability to estimate profits before transaction execution
+- Slippage protection to handle market volatility
+- Time-based constraints to prevent prolonged execution
 
 ## Project Structure
 
@@ -31,6 +34,7 @@ This smart contract allows users to execute arbitrage trades between two differe
   - `flash_loan.rs`: Main flash loan and arbitrage instruction
 - `tests/`: Integration tests
 - `flash-loan-ui/`: React-based user interface
+- `scripts/`: Simulation and utility scripts
 - `*.sh`: Various deployment and testing scripts
 
 ## Installation and Setup
@@ -68,13 +72,73 @@ Deploys the contract to Solana testnet and starts the UI.
 ```
 Creates a persistent wallet for deployment, funds it if needed, deploys to the specified network (default: testnet), and starts the UI.
 
+## Simulation
+
+The smart contract includes a `simulate_arbitrage` function that allows you to estimate profits without executing the actual transaction. This is useful for:
+
+1. Testing if a potential arbitrage opportunity would be profitable
+2. Understanding how different parameters affect profitability
+3. Avoiding failed transactions that would incur fees
+
+### Running Simulations
+
+You can run simulations in three ways:
+
+#### 1. Using the UI
+In the web interface, click the "Simulate Transaction" button before executing to see estimated profits.
+
+#### 2. Using the Command Line Script
+```bash
+node scripts/run_simulation.js
+```
+This script simulates multiple scenarios:
+- Basic arbitrage with 1 SOL loan
+- Larger loan amount (10 SOL)
+- Including slippage factors
+
+#### 3. Programmatically via the Anchor Program
+```rust
+// Simulation function returns estimated profit
+let estimated_profit = program.methods
+  .simulateArbitrage(loanAmount, minProfitAmount)
+  .accounts({...})
+  .simulate();
+```
+
+### Sample Simulation Results
+
+For a 10 SOL flash loan with a 5% price discrepancy between DEXes:
+
+```
+Simulation Results:
+- Final balance after swaps: 10.71 SOL
+- Repayment amount: 10.03 SOL
+- Profit: 0.68 SOL (6.80%)
+```
+
+With added slippage of 0.5%:
+```
+- Final balance: 10.60 SOL
+- Profit: 0.573 SOL (5.73%) 
+- Profit reduction due to slippage: 0.107 SOL (15.71% less)
+```
+
+### Simulation Factors
+
+The simulation takes into account:
+- Flash loan fee (0.3%)
+- Exchange rates on both DEXes
+- Slippage tolerance
+- Minimum profit requirements
+
 ## UI Usage
 
 After deployment, the UI will be available at http://localhost:3000. You can:
 
 1. Connect your wallet using the "Connect Wallet" button
 2. Enter the loan amount and minimum profit amount
-3. Click "Execute Flash Loan Arbitrage" to execute or simulate the transaction
+3. Click "Simulate Transaction" to estimate potential profits
+4. Click "Execute Flash Loan Arbitrage" to execute the transaction
 
 ## Usage in Code
 
@@ -100,6 +164,20 @@ Required accounts:
 - DEX B accounts
 - Token accounts for both the loan token and intermediate token
 
+### Simulation Instruction
+
+To simulate a flash loan and estimate profit:
+
+```rust
+simulate_arbitrage(
+    ctx: Context<FlashLoanAndArbitrage>,
+    loan_amount: u64,
+    min_profit_amount: u64,
+) -> Result<u64>
+```
+
+Returns the estimated profit amount in base units.
+
 ## Customization
 
 The contract can be customized for specific DEXes and lending protocols by modifying:
@@ -115,6 +193,10 @@ This contract implements several security measures:
 - Profit threshold validation
 - Error handling for all external calls
 - Check-Effect-Interaction pattern
+- Slippage protection to handle market volatility
+- Time-based constraints to prevent transaction delays
+- Owner and mint address verification for all token accounts
+- Prevention of reusing the same DEX for both sides of the arbitrage
 
 ## Testing
 
