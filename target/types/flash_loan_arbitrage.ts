@@ -1,0 +1,505 @@
+export type FlashLoanArbitrage = {
+  "version": "0.1.0",
+  "name": "flash_loan_arbitrage",
+  "instructions": [
+    {
+      "name": "flashLoanAndArbitrage",
+      "docs": [
+        "The main instruction that performs flash loan arbitrage across two DEXes",
+        "",
+        "# Arguments",
+        "* `ctx` - The context containing all accounts needed for the operation",
+        "* `loan_amount` - The amount of SOL tokens to borrow for the flash loan",
+        "* `min_profit_amount` - The minimum profit required for the transaction to succeed",
+        "",
+        "# Returns",
+        "* `Result<()>` - Result indicating success or an error code"
+      ],
+      "accounts": [
+        {
+          "name": "base",
+          "accounts": [
+            {
+              "name": "authority",
+              "isMut": true,
+              "isSigner": true,
+              "docs": [
+                "The authority who can execute this arbitrage"
+              ]
+            },
+            {
+              "name": "tokenProgram",
+              "isMut": false,
+              "isSigner": false,
+              "docs": [
+                "SPL Token program"
+              ]
+            },
+            {
+              "name": "systemProgram",
+              "isMut": false,
+              "isSigner": false,
+              "docs": [
+                "System program"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "lendingProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The lending protocol program ID"
+          ]
+        },
+        {
+          "name": "loanTokenAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The loan token account of the arbitrageur"
+          ]
+        },
+        {
+          "name": "loanReserveAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The lending protocol's reserve account"
+          ]
+        },
+        {
+          "name": "lendingFeeAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The fee account for the lending protocol"
+          ]
+        },
+        {
+          "name": "dexAProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The DEX A program ID"
+          ]
+        },
+        {
+          "name": "dexAPool",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The DEX A pool account"
+          ]
+        },
+        {
+          "name": "dexAAuthority",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The DEX A authority account"
+          ]
+        },
+        {
+          "name": "dexAInputTokenAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The input token account for DEX A swap (loan token)"
+          ]
+        },
+        {
+          "name": "dexAOutputTokenAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The output token account for DEX A swap (intermediate token)"
+          ]
+        },
+        {
+          "name": "dexATokenAAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The DEX A pool's token A account"
+          ]
+        },
+        {
+          "name": "dexATokenBAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The DEX A pool's token B account"
+          ]
+        },
+        {
+          "name": "dexBProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The DEX B program ID"
+          ]
+        },
+        {
+          "name": "dexBPool",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The DEX B pool account"
+          ]
+        },
+        {
+          "name": "dexBAuthority",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The DEX B authority account"
+          ]
+        },
+        {
+          "name": "dexBInputTokenAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The input token account for DEX B swap (intermediate token)"
+          ]
+        },
+        {
+          "name": "dexBOutputTokenAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The output token account for DEX B swap (loan token)"
+          ]
+        },
+        {
+          "name": "dexBTokenAAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The DEX B pool's token A account"
+          ]
+        },
+        {
+          "name": "dexBTokenBAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The DEX B pool's token B account"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "loanAmount",
+          "type": "u64"
+        },
+        {
+          "name": "minProfitAmount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "FlashLoanInitFailed",
+      "msg": "Flash loan initialization failed"
+    },
+    {
+      "code": 6001,
+      "name": "FlashLoanRepaymentFailed",
+      "msg": "Flash loan repayment failed"
+    },
+    {
+      "code": 6002,
+      "name": "DexSwapFailed",
+      "msg": "DEX swap failed"
+    },
+    {
+      "code": 6003,
+      "name": "InsufficientProfit",
+      "msg": "Insufficient profit from arbitrage"
+    },
+    {
+      "code": 6004,
+      "name": "InvalidTokenAccount",
+      "msg": "Invalid token account"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidPoolAccount",
+      "msg": "Invalid pool account"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidLoanAmount",
+      "msg": "Invalid loan amount"
+    },
+    {
+      "code": 6007,
+      "name": "MathOverflow",
+      "msg": "Math operation overflow"
+    },
+    {
+      "code": 6008,
+      "name": "Unauthorized",
+      "msg": "Unauthorized access"
+    }
+  ]
+};
+
+export const IDL: FlashLoanArbitrage = {
+  "version": "0.1.0",
+  "name": "flash_loan_arbitrage",
+  "instructions": [
+    {
+      "name": "flashLoanAndArbitrage",
+      "docs": [
+        "The main instruction that performs flash loan arbitrage across two DEXes",
+        "",
+        "# Arguments",
+        "* `ctx` - The context containing all accounts needed for the operation",
+        "* `loan_amount` - The amount of SOL tokens to borrow for the flash loan",
+        "* `min_profit_amount` - The minimum profit required for the transaction to succeed",
+        "",
+        "# Returns",
+        "* `Result<()>` - Result indicating success or an error code"
+      ],
+      "accounts": [
+        {
+          "name": "base",
+          "accounts": [
+            {
+              "name": "authority",
+              "isMut": true,
+              "isSigner": true,
+              "docs": [
+                "The authority who can execute this arbitrage"
+              ]
+            },
+            {
+              "name": "tokenProgram",
+              "isMut": false,
+              "isSigner": false,
+              "docs": [
+                "SPL Token program"
+              ]
+            },
+            {
+              "name": "systemProgram",
+              "isMut": false,
+              "isSigner": false,
+              "docs": [
+                "System program"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "lendingProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The lending protocol program ID"
+          ]
+        },
+        {
+          "name": "loanTokenAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The loan token account of the arbitrageur"
+          ]
+        },
+        {
+          "name": "loanReserveAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The lending protocol's reserve account"
+          ]
+        },
+        {
+          "name": "lendingFeeAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The fee account for the lending protocol"
+          ]
+        },
+        {
+          "name": "dexAProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The DEX A program ID"
+          ]
+        },
+        {
+          "name": "dexAPool",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The DEX A pool account"
+          ]
+        },
+        {
+          "name": "dexAAuthority",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The DEX A authority account"
+          ]
+        },
+        {
+          "name": "dexAInputTokenAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The input token account for DEX A swap (loan token)"
+          ]
+        },
+        {
+          "name": "dexAOutputTokenAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The output token account for DEX A swap (intermediate token)"
+          ]
+        },
+        {
+          "name": "dexATokenAAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The DEX A pool's token A account"
+          ]
+        },
+        {
+          "name": "dexATokenBAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The DEX A pool's token B account"
+          ]
+        },
+        {
+          "name": "dexBProgram",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The DEX B program ID"
+          ]
+        },
+        {
+          "name": "dexBPool",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The DEX B pool account"
+          ]
+        },
+        {
+          "name": "dexBAuthority",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "The DEX B authority account"
+          ]
+        },
+        {
+          "name": "dexBInputTokenAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The input token account for DEX B swap (intermediate token)"
+          ]
+        },
+        {
+          "name": "dexBOutputTokenAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The output token account for DEX B swap (loan token)"
+          ]
+        },
+        {
+          "name": "dexBTokenAAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The DEX B pool's token A account"
+          ]
+        },
+        {
+          "name": "dexBTokenBAccount",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "The DEX B pool's token B account"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "loanAmount",
+          "type": "u64"
+        },
+        {
+          "name": "minProfitAmount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "FlashLoanInitFailed",
+      "msg": "Flash loan initialization failed"
+    },
+    {
+      "code": 6001,
+      "name": "FlashLoanRepaymentFailed",
+      "msg": "Flash loan repayment failed"
+    },
+    {
+      "code": 6002,
+      "name": "DexSwapFailed",
+      "msg": "DEX swap failed"
+    },
+    {
+      "code": 6003,
+      "name": "InsufficientProfit",
+      "msg": "Insufficient profit from arbitrage"
+    },
+    {
+      "code": 6004,
+      "name": "InvalidTokenAccount",
+      "msg": "Invalid token account"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidPoolAccount",
+      "msg": "Invalid pool account"
+    },
+    {
+      "code": 6006,
+      "name": "InvalidLoanAmount",
+      "msg": "Invalid loan amount"
+    },
+    {
+      "code": 6007,
+      "name": "MathOverflow",
+      "msg": "Math operation overflow"
+    },
+    {
+      "code": 6008,
+      "name": "Unauthorized",
+      "msg": "Unauthorized access"
+    }
+  ]
+};

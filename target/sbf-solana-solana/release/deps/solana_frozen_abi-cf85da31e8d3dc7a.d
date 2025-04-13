@@ -1,0 +1,10 @@
+/Users/kalash/Documents/sol smart contract/target/sbf-solana-solana/release/deps/solana_frozen_abi-cf85da31e8d3dc7a.rmeta: /Users/kalash/.cargo/registry/src/github.com-1ecc6299db9ec823/solana-frozen-abi-1.16.0/src/lib.rs /Users/kalash/.cargo/registry/src/github.com-1ecc6299db9ec823/solana-frozen-abi-1.16.0/src/abi_digester.rs /Users/kalash/.cargo/registry/src/github.com-1ecc6299db9ec823/solana-frozen-abi-1.16.0/src/abi_example.rs /Users/kalash/.cargo/registry/src/github.com-1ecc6299db9ec823/solana-frozen-abi-1.16.0/src/hash.rs
+
+/Users/kalash/Documents/sol smart contract/target/sbf-solana-solana/release/deps/libsolana_frozen_abi-cf85da31e8d3dc7a.rlib: /Users/kalash/.cargo/registry/src/github.com-1ecc6299db9ec823/solana-frozen-abi-1.16.0/src/lib.rs /Users/kalash/.cargo/registry/src/github.com-1ecc6299db9ec823/solana-frozen-abi-1.16.0/src/abi_digester.rs /Users/kalash/.cargo/registry/src/github.com-1ecc6299db9ec823/solana-frozen-abi-1.16.0/src/abi_example.rs /Users/kalash/.cargo/registry/src/github.com-1ecc6299db9ec823/solana-frozen-abi-1.16.0/src/hash.rs
+
+/Users/kalash/Documents/sol smart contract/target/sbf-solana-solana/release/deps/solana_frozen_abi-cf85da31e8d3dc7a.d: /Users/kalash/.cargo/registry/src/github.com-1ecc6299db9ec823/solana-frozen-abi-1.16.0/src/lib.rs /Users/kalash/.cargo/registry/src/github.com-1ecc6299db9ec823/solana-frozen-abi-1.16.0/src/abi_digester.rs /Users/kalash/.cargo/registry/src/github.com-1ecc6299db9ec823/solana-frozen-abi-1.16.0/src/abi_example.rs /Users/kalash/.cargo/registry/src/github.com-1ecc6299db9ec823/solana-frozen-abi-1.16.0/src/hash.rs
+
+/Users/kalash/.cargo/registry/src/github.com-1ecc6299db9ec823/solana-frozen-abi-1.16.0/src/lib.rs:
+/Users/kalash/.cargo/registry/src/github.com-1ecc6299db9ec823/solana-frozen-abi-1.16.0/src/abi_digester.rs:
+/Users/kalash/.cargo/registry/src/github.com-1ecc6299db9ec823/solana-frozen-abi-1.16.0/src/abi_example.rs:
+/Users/kalash/.cargo/registry/src/github.com-1ecc6299db9ec823/solana-frozen-abi-1.16.0/src/hash.rs:

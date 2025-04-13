@@ -16,11 +16,6 @@ keys/program-keypair.json
 target/deploy/flash_loan_arbitrage_program-keypair.json
 test-ledger/faucet-keypair.json
 
-# Anchor build artifacts
-.anchor/
-target/
-**/*.rs.bk
-
 # Solana test ledger
 test-ledger/
 .test-ledger/

@@ -1,0 +1,1 @@
+Error: Function _ZN28flash_loan_arbitrage_program9__private8__global24flash_loan_and_arbitrage17hc388b4dfe8c3137eE Stack offset of 6184 exceeded max offset of 4096 by 2088 bytes, please minimize large stack variables
